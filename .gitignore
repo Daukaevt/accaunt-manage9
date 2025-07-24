@@ -34,4 +34,7 @@ build/
 # VS Code
 .vscode/
 
+accaunt-manag9-eureka-server/src/main/resources/application.properties
+
+
 
