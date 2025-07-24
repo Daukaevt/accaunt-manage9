@@ -1,22 +1,24 @@
 # Maven
-target/
+# Игнорируем папки target во всех подпроектах
+**/target/
+
+# Maven wrapper
 .mvn/wrapper/maven-wrapper.jar
 
-# Не игнорируем target в src/main и src/test
-!**/src/main/**/target/
-!**/src/test/**/target/
+# Системные и IDE файлы
+HELP.md
 
-# STS (Spring Tool Suite) / Eclipse
-.apt_generated/
+# Eclipse
+.apt_generated
 .classpath
 .factorypath
 .project
-.settings/
+.settings
 .springBeans
-.sts4-cache/
+.sts4-cache
 
 # IntelliJ IDEA
-.idea/
+.idea
 *.iws
 *.iml
 *.ipr
@@ -28,20 +30,8 @@ target/
 /nbdist/
 /.nb-gradle/
 build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
 # VS Code
 .vscode/
 
-# Логи
-*.log
-logs/
-
-# ОС
-.DS_Store
-Thumbs.db
-
-# Дополнительно, твой HELP.md не игнорируем
-!HELP.md
 
