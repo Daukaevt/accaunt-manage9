@@ -36,5 +36,8 @@ build/
 
 accaunt-manag9-eureka-server/src/main/resources/application.properties
 
+# Игнорировать все application-secrets.yml в проекте
+**/application-secrets.yml
+
 
 
