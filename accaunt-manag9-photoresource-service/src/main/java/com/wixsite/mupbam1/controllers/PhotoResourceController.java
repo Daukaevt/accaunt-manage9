@@ -30,9 +30,14 @@ public class PhotoResourceController {
     }
 
     @GetMapping("/pictures/owner")
-    public List<Picture> getPicturesByOwnerKey(@RequestParam String ownerKey) {
-        return pictureService.findByOwnerKey(ownerKey);
+    public List<Picture> getPicturesByOwner(
+        @RequestParam String ownerKey,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "24") int size
+    ) {
+        return pictureService.getPicturesByOwner(ownerKey, page, size);
     }
+
 
 }
 
