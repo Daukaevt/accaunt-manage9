@@ -1,18 +1,25 @@
-server:
-  port: 8080
-
 spring:
+  config:
+    import: optional:dotenv:.env
   application:
     name: api-gateway
-
   cloud:
     gateway:
-      server:
-        webflux:
-          discovery:
-            locator:
-              enabled: true
-              lower-case-service-id: true
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: photo-resource-service
+          uri: http://localhost:8083  # прямой вызов без Eureka
+          predicates:
+            - Path=/pictures/**         # ловим пути с /pictures/**
+          filters:
+            - RewritePath=/pictures/(?<segment>.*), /resource/pictures/${segment}  # добавляем префикс /resource
+            - name: JwtAuthFilter       # фильтр JWT, оставляем как есть
+
+jwt:
+  secret: ${JWT_SECRET}
 
 eureka:
   client:

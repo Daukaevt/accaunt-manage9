@@ -21,15 +21,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf().disable()
-                .authorizeHttpRequests()
+            .csrf().disable()
+            .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/resource/public/**").permitAll()
+                .requestMatchers("/resource/**").hasRole("USER")  // требует ROLE_USER
                 .anyRequest().authenticated()
-                .and()
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+            )
+            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
+
 }

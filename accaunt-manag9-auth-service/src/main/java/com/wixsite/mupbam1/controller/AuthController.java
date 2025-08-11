@@ -24,7 +24,8 @@ public class AuthController {
     @PostMapping("/login")
     public String login(@RequestBody AuthRequest authRequest) {
         if (authService.authenticate(authRequest)) {
-            return jwtUtil.generateToken(authRequest.getUsername());
+            String role = authService.getRoleByUsername(authRequest.getUsername());
+            return jwtUtil.generateToken(authRequest.getUsername(), role);
         } else {
             throw new RuntimeException("Invalid credentials");
         }

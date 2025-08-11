@@ -6,9 +6,12 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
 
 import javax.crypto.SecretKey;
 import java.util.Date;
@@ -16,6 +19,8 @@ import java.util.Date;
 @Component
 @RequiredArgsConstructor
 public class JwtUtil {
+
+    private static final Logger logger = LoggerFactory.getLogger(JwtUtil.class);
 
     private SecretKey key;
 
@@ -28,11 +33,15 @@ public class JwtUtil {
     public void init() {
         // Создаём ключ из секрета (длина должна быть >= 256 бит для HS256)
         this.key = Keys.hmacShaKeyFor(secret.getBytes());
+
+        // Логируем секрет при старте приложения
+        logger.info("JWT_SECRET at startup ауф-сервис: {}", secret);
     }
 
-    public String generateToken(String username) {
+    public String generateToken(String username, String role) {
         return Jwts.builder()
                 .setSubject(username)
+                .claim("role", role)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -47,7 +56,7 @@ public class JwtUtil {
         return !getClaims(token).getExpiration().before(new Date());
     }
 
-    private Claims getClaims(String token) {
+    public Claims getClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
