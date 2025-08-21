@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Welcome</title>
+</head>
+<body>
+<h2>Welcome, <span th:text="${username}"></span>!</h2>
+<p>Your JWT token:</p>
+<pre th:text="${token}"></pre>
+<p>Use this token for API requests to /pictures.</p>
+</body>
+</html>
