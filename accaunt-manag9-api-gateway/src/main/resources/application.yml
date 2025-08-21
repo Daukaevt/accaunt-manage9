@@ -1,8 +1,7 @@
 spring:
-  config:
-    import: optional:dotenv:.env
   application:
     name: api-gateway
+
   cloud:
     gateway:
       discovery:
@@ -10,16 +9,26 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
-        - id: photo-resource-service
-          uri: http://localhost:8083  # прямой вызов без Eureka
+        # Маршрут для auth-service
+        - id: auth-service
+          uri: lb://ACCAUNT-MANAG9-AUTH-SERVICE
           predicates:
-            - Path=/pictures/**         # ловим пути с /pictures/**
+            - Path=/auth/**    # проксируем все /auth/** на auth-service
+
+        # Маршрут для resource-service
+        - id: photoresource
+          uri: lb://ACCAUNT-MANAG9-PHOTORESOURCE-SERVICE
+          predicates:
+            - Path=/pictures/**          # ловим все запросы /pictures/**
           filters:
-            - RewritePath=/pictures/(?<segment>.*), /resource/pictures/${segment}  # добавляем префикс /resource
-            - name: JwtAuthFilter       # фильтр JWT, оставляем как есть
+            - RewritePath=/pictures/(?<segment>.*), /resource/pictures/${segment}
 
 jwt:
   secret: ${JWT_SECRET}
+
+resource:
+  service:
+    token: your-internal-token-here
 
 eureka:
   client:
