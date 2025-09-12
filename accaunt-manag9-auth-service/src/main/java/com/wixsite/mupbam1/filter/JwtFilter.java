@@ -1,7 +1,6 @@
 package com.wixsite.mupbam1.filter;
 
 import com.wixsite.mupbam1.util.JwtUtil;
-import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

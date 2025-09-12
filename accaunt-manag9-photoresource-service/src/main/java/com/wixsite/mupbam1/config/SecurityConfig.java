@@ -1,12 +1,9 @@
 package com.wixsite.mupbam1.config;
 
 import com.wixsite.mupbam1.filter.JwtAuthenticationFilter;
-import com.wixsite.mupbam1.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -23,8 +20,8 @@ public class SecurityConfig {
         http
             .csrf().disable()
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/resource/public/**").permitAll()
-                .requestMatchers("/resource/**").hasRole("USER")  // требует ROLE_USER
+                .requestMatchers("/pictures/test").permitAll() // тестовый эндпоинт
+                .requestMatchers("/pictures/**").hasRole("USER")
                 .anyRequest().authenticated()
             )
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
@@ -32,5 +29,4 @@ public class SecurityConfig {
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
-
 }

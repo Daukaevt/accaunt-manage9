@@ -2,9 +2,9 @@ spring:
   application:
     name: client-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/auth_service_db
-    username: postgres
-    password: bestuser
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -18,9 +18,14 @@ server:
   port: 8085
 
 jwt:
-  secret: "my-super-long-secret-key-for-hmac-sha256"
+  secret: ${JWT_SECRET}
 
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+
+logging:
+  level:
+    com.wixsite.mupbam1.client.filter.JwtAuthFilter: DEBUG
+

@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -29,39 +31,41 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        final String authHeader = request.getHeader("Authorization");
+        String authHeader = request.getHeader("Authorization");
+        log.info("Authorization header: {}", authHeader);
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.info("Нет Authorization заголовка или токен не Bearer, пропускаем фильтр");
             filterChain.doFilter(request, response);
             return;
         }
 
         String token = authHeader.substring(7);
+        log.info("Извлечён токен: {}", token);
+
         if (!jwtUtil.validateToken(token)) {
-            filterChain.doFilter(request, response); // токен не валиден — пусть дальше стандарт обработает
+            log.warn("JWT невалиден, продолжаем фильтрацию без аутентификации");
+            filterChain.doFilter(request, response);
             return;
         }
 
         Claims claims = jwtUtil.getClaims(token);
         String username = claims.getSubject();
+        log.info("JWT валиден. Subject: {}", username);
 
-        // Берём роль из токена (имя поля — "role"). Подстраивай под свой токен.
-        String role = claims.get("role", String.class); // может быть null
+        String role = claims.get("role", String.class);
+        log.info("Роль из токена: {}", role);
 
-        List<SimpleGrantedAuthority> authorities;
-        if (role != null && !role.isBlank()) {
-            // Spring's hasRole("USER") ожидает authority "ROLE_USER"
-            authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
-        } else {
-            // если роли нет — ставим пустой список (или дефолтную роль)
-            authorities = List.of();
-        }
+        List<SimpleGrantedAuthority> authorities = (role != null && !role.isBlank())
+                ? List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                : List.of();
 
         UsernamePasswordAuthenticationToken authenticationToken =
                 new UsernamePasswordAuthenticationToken(username, null, authorities);
 
         authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+        log.info("Аутентификация установлена в SecurityContext для пользователя: {}", username);
 
         filterChain.doFilter(request, response);
     }

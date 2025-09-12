@@ -1,34 +1,31 @@
-spring:
-  application:
-    name: api-gateway
+application:
+  name: api-gateway
 
-  cloud:
-    gateway:
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
-      routes:
-        # Маршрут для auth-service
-        - id: auth-service
-          uri: lb://ACCAUNT-MANAG9-AUTH-SERVICE
-          predicates:
-            - Path=/auth/**    # проксируем все /auth/** на auth-service
+cloud:
+  gateway:
+    discovery:
+      locator:
+        enabled: true
+        lower-case-service-id: false
+    routes:
+      # Auth-service
+      - id: auth-service
+        uri: lb://ACCAUNT-MANAG9-AUTH-SERVICE
+        predicates:
+          - Path=/auth/**
 
-        # Маршрут для resource-service
-        - id: photoresource
-          uri: lb://ACCAUNT-MANAG9-PHOTORESOURCE-SERVICE
-          predicates:
-            - Path=/pictures/**          # ловим все запросы /pictures/**
-          filters:
-            - RewritePath=/pictures/(?<segment>.*), /resource/pictures/${segment}
+      # PhotoResource-service
+      - id: photoresource
+        uri: lb://ACCAUNT-MANAG9-PHOTORESOURCE-SERVICE
+        predicates:
+          - Path=/pictures/**                 
+        filters:
+          # Убираем префикс /pictures, чтобы путь совпадал с контроллером
+          - RewritePath=/pictures/(?<segment>.*), /pictures/${segment}
 
-jwt:
-  secret: ${JWT_SECRET}
-
-resource:
-  service:
-    token: your-internal-token-here
+auth:
+  public-key:
+    path: keys/public.pem  # Публичный ключ auth-service для проверки JWT
 
 eureka:
   client:

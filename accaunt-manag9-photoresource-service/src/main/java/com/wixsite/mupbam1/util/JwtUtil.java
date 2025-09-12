@@ -1,45 +1,59 @@
 package com.wixsite.mupbam1.util;
 
-import io.github.cdimascio.dotenv.Dotenv;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 
-import javax.crypto.SecretKey;
-
+@Slf4j
 @Component
-@RequiredArgsConstructor
 public class JwtUtil {
 
-    private final Dotenv dotenv;
-
-    private SecretKey key;
+    private PublicKey publicKey;
 
     @PostConstruct
     public void init() {
-        String secret = dotenv.get("JWT_SECRET");
-        if (secret == null) {
-            throw new IllegalStateException("JWT_SECRET is not set in .env");
+        try {
+            log.info("Загружаем public.pem...");
+            String key = new String(Files.readAllBytes(Paths.get("keys/public.pem")))
+                    .replaceAll("-----BEGIN PUBLIC KEY-----", "")
+                    .replaceAll("-----END PUBLIC KEY-----", "")
+                    .replaceAll("\\s+", "");
+            byte[] decoded = Base64.getDecoder().decode(key);
+
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decoded);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            this.publicKey = keyFactory.generatePublic(keySpec);
+            log.info("Public key успешно загружен для проверки JWT");
+        } catch (Exception e) {
+            log.error("Ошибка при загрузке public.pem", e);
+            throw new RuntimeException("Ошибка при загрузке public.pem", e);
         }
-        this.key = Keys.hmacShaKeyFor(secret.getBytes());
     }
 
     public boolean validateToken(String token) {
         try {
+            log.info("Проверяем JWT: {}", token);
             getClaims(token);
+            log.info("JWT валиден");
             return true;
         } catch (Exception e) {
+            log.warn("JWT невалиден: {}", e.getMessage());
             return false;
         }
     }
 
     public Claims getClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(key)
+                .setSigningKey(publicKey)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();

@@ -2,10 +2,14 @@ package com.wixsite.mupbam1.controller;
 
 import com.wixsite.mupbam1.dto.AuthRequest;
 import com.wixsite.mupbam1.service.AuthService;
+import com.wixsite.mupbam1.service.EmailService;
+import com.wixsite.mupbam1.service.VerificationCodeService;
 import com.wixsite.mupbam1.util.JwtUtil;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
@@ -14,31 +18,63 @@ public class AuthController {
 
     private final JwtUtil jwtUtil;
     private final AuthService authService;
+    private final EmailService emailService;
+    private final VerificationCodeService verificationCodeService;
 
     @PostMapping("/register")
-    public String register(@RequestBody AuthRequest authRequest) {
+    public ResponseEntity<String> register(@RequestBody AuthRequest authRequest) {
         authService.register(authRequest);
-        return "User registered successfully";
+        return ResponseEntity.ok("User registered successfully");
     }
 
     @PostMapping("/login")
-    public String login(@RequestBody AuthRequest authRequest) {
+    public ResponseEntity<?> login(@RequestBody AuthRequest authRequest) {
         if (authService.authenticate(authRequest)) {
-            String role = authService.getRoleByUsername(authRequest.getUsername());
-            return jwtUtil.generateToken(authRequest.getUsername(), role);
+            // генерируем код
+            String verificationCode = String.valueOf((int)(Math.random() * 900000) + 100000);
+
+            // сохраняем код
+            verificationCodeService.saveCode(authRequest.getUsername(), verificationCode);
+
+            // получаем email пользователя
+            String email = authService.getEmailByUsername(authRequest.getUsername());
+
+            // отправляем код на email
+            emailService.sendVerificationCode(email, verificationCode);
+
+            return ResponseEntity.ok("Please check your email for verification code");
         } else {
             throw new RuntimeException("Invalid credentials");
         }
     }
 
+    @PostMapping("/verify")
+    public ResponseEntity<?> verify(@RequestBody VerificationRequest verifyRequest) {
+        // Проверяем валидность кода
+        boolean isValid = verificationCodeService.verifyCode(verifyRequest.getUsername(), verifyRequest.getCode());
+        
+        if (isValid) {
+            String role = authService.getRoleByUsername(verifyRequest.getUsername());
+            return ResponseEntity.ok(jwtUtil.generateToken(verifyRequest.getUsername(), role));
+        } else {
+            throw new RuntimeException("Invalid verification code");
+        }
+    }
+
     @GetMapping("/validate")
-    public boolean validate(@RequestParam String token) {
-        return jwtUtil.validateToken(token);
+    public ResponseEntity<Boolean> validate(@RequestParam String token) {
+        return ResponseEntity.ok(jwtUtil.validateToken(token));
     }
 
     @GetMapping("/")
-    public String index() {
-        return "Hello from auth-service!";
+    public ResponseEntity<String> index() {
+        return ResponseEntity.ok("Hello from auth-service!");
     }
 }
 
+// DTO для верификации
+@Data
+class VerificationRequest {
+    private String username;
+    private String code;
+}

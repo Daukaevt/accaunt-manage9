@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: accaunt-manag9-auth-service
+    name: account-manag9-auth-service
 
   datasource:
     url: ${DB_URL}
@@ -18,6 +18,19 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  mail:
+    host: smtp.gmail.com   # или smtp.yandex.ru / smtp.mail.ru и т.д.
+    port: 587
+    username: ${EMAIL_USERNAME}  # логин почтового ящика
+    password: ${EMAIL_PASSWORD}  # пароль приложения (app password!)
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+    default-encoding: UTF-8
 
 jwt:
   secret: ${JWT_SECRET}

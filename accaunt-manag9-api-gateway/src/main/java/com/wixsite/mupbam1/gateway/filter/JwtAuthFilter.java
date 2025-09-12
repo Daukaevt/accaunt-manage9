@@ -2,38 +2,38 @@ package com.wixsite.mupbam1.gateway.filter;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
-import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Mono;
-
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 
 @Component
 public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Config> {
 
-    @Value("${jwt.secret}")
-    private String secret;
+    @Value("${auth.public-key.path}")
+    private String publicKeyPath;
 
-    @Value("${resource.service.token}")
-    private String internalToken; // внутренний токен для resource-service
-
-    private SecretKey key;
+    private PublicKey publicKey;
 
     @PostConstruct
-    public void init() {
-        if (secret == null || secret.length() < 32) {
-            throw new IllegalStateException("JWT secret must be at least 256 bits (32 chars)");
-        }
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        System.out.println("JWT_SECRET initialized in Gateway");
+    public void init() throws Exception {
+        String keyContent = Files.readString(Path.of(publicKeyPath))
+                .replace("-----BEGIN PUBLIC KEY-----", "")
+                .replace("-----END PUBLIC KEY-----", "")
+                .replaceAll("\\s", "");
+        byte[] decoded = Base64.getDecoder().decode(keyContent);
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decoded);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        publicKey = kf.generatePublic(keySpec);
+        System.out.println("Gateway JWT Public Key loaded from " + publicKeyPath);
     }
 
     public JwtAuthFilter() {
@@ -43,56 +43,36 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
     @Override
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
-            ServerHttpRequest request = exchange.getRequest();
-            String path = request.getURI().getPath();
+            String path = exchange.getRequest().getURI().getPath();
 
-            // Пропускаем открытые пути, например /auth/**
-            if (path.startsWith("/auth/")) {
+            if (path.startsWith("/auth/") || path.startsWith("/public/")) {
                 return chain.filter(exchange);
             }
 
-            // Проверка заголовка Authorization
-            String authHeader = request.getHeaders().getFirst("Authorization");
+            String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return onError(exchange, "Missing or invalid Authorization header", HttpStatus.UNAUTHORIZED);
+                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                return exchange.getResponse().setComplete();
             }
 
             String token = authHeader.substring(7);
 
             try {
-                // Проверяем токен клиента
                 Claims claims = Jwts.parserBuilder()
-                        .setSigningKey(key)
+                        .setSigningKey(publicKey)
                         .build()
                         .parseClaimsJws(token)
                         .getBody();
 
-                String user = claims.getSubject();
-                System.out.println("Authenticated user: " + user);
-
-                // Если запрос к resource-service, подставляем внутренний токен
-                if (path.startsWith("/pictures")) {
-                    ServerHttpRequest modifiedRequest = request.mutate()
-                            .header("Authorization", "Bearer " + internalToken)
-                            .build();
-                    return chain.filter(exchange.mutate().request(modifiedRequest).build());
-                }
-
+                System.out.println("Gateway - Authenticated user: " + claims.getSubject() +
+                        ", role: " + claims.get("role"));
+                return chain.filter(exchange);
             } catch (Exception e) {
-                return onError(exchange, "Invalid token: " + e.getMessage(), HttpStatus.FORBIDDEN);
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
             }
-
-            return chain.filter(exchange);
         };
     }
 
-    private Mono<Void> onError(ServerWebExchange exchange, String message, HttpStatus status) {
-        System.out.println("JWT Gateway Error: " + message);
-        exchange.getResponse().setStatusCode(status);
-        return exchange.getResponse().setComplete();
-    }
-
-    public static class Config {
-        // Можно добавить параметры фильтра при необходимости
-    }
+    public static class Config {}
 }

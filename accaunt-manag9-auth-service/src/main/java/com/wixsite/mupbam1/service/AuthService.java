@@ -20,11 +20,22 @@ public class AuthService {
         if (userRepository.findByUsername(authRequest.getUsername()).isPresent()) {
             throw new RuntimeException("User already exists");
         }
+        if (userRepository.findByEmail(authRequest.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already registered");
+        }
+
         User user = new User();
         user.setUsername(authRequest.getUsername());
         user.setPassword(passwordEncoder.encode(authRequest.getPassword()));
-        user.setRole(authRequest.getRole()); // <-- добавляем
+        user.setRole(authRequest.getRole());
+        user.setEmail(authRequest.getEmail()); // <-- сохраняем email
         userRepository.save(user);
+    }
+    
+    public String getEmailByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .map(User::getEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
     
     public String getRoleByUsername(String username) {
