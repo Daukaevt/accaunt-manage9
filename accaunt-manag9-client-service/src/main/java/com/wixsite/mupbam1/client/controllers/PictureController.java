@@ -20,6 +20,6 @@ public class PictureController {
                                      @RequestHeader("Authorization") String authHeader) {
         String username = authentication.getName();
         String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-        return pictureClientService.getPicturesByOwner(username, token);
+        return pictureClientService.getPicturesByOwner(username, token); 
     }
 }
