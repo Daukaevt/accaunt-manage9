@@ -2,6 +2,7 @@ package com.wixsite.mupbam1.client.services;
 
 import com.wixsite.mupbam1.client.model.Picture;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -13,14 +14,20 @@ public class PictureClientService {
 
     private final WebClient.Builder webClientBuilder;
 
-    public List<Picture> getPicturesByOwner(String username, String token) {
-        System.out.println("Calling /pictures for user: " + username);
+    public List<Picture> getPicturesByOwner(String username) {
+        // Получаем JWT из контекста Security
+        String token = SecurityContextHolder.getContext().getAuthentication() != null
+                ? (String) SecurityContextHolder.getContext().getAuthentication().getCredentials()
+                : null;
 
         return webClientBuilder.build()
                 .get()
-                // Обращаемся через имя сервиса, которое зарегистрировано в Eureka
                 .uri("http://ACCAUNT-MANAG9-PHOTORESOURCE-SERVICE/pictures?owner=" + username)
-                .header("Authorization", "Bearer " + token)
+                .headers(headers -> {
+                    if (token != null) {
+                        headers.setBearerAuth(token);
+                    }
+                })
                 .retrieve()
                 .bodyToFlux(Picture.class)
                 .collectList()
