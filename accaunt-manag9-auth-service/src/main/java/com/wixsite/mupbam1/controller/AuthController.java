@@ -9,6 +9,7 @@ import com.wixsite.mupbam1.util.JwtUtil;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -30,34 +31,27 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest authRequest) {
         if (authService.authenticate(authRequest)) {
-            // генерируем код
             String verificationCode = String.valueOf((int)(Math.random() * 900000) + 100000);
 
-            // сохраняем код
             verificationCodeService.saveCode(authRequest.getUsername(), verificationCode);
-
-            // получаем email пользователя
             String email = authService.getEmailByUsername(authRequest.getUsername());
-
-            // отправляем код на email
             emailService.sendVerificationCode(email, verificationCode);
 
             return ResponseEntity.ok("Please check your email for verification code");
         } else {
-            throw new RuntimeException("Invalid credentials");
+            throw new BadCredentialsException("Invalid username or password");
         }
     }
 
     @PostMapping("/verify")
     public ResponseEntity<?> verify(@RequestBody VerificationRequest verifyRequest) {
-        // Проверяем валидность кода
         boolean isValid = verificationCodeService.verifyCode(verifyRequest.getUsername(), verifyRequest.getCode());
-        
+
         if (isValid) {
             String role = authService.getRoleByUsername(verifyRequest.getUsername());
             return ResponseEntity.ok(jwtUtil.generateToken(verifyRequest.getUsername(), role));
         } else {
-            throw new RuntimeException("Invalid verification code");
+            throw new BadCredentialsException("Invalid verification code");
         }
     }
 

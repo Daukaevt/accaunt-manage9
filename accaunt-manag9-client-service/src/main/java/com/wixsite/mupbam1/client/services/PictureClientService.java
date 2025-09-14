@@ -14,7 +14,7 @@ public class PictureClientService {
 				.get() // Обращаемся через имя сервиса, которое зарегистрировано в Eureka 
 				.uri("http://ACCAUNT-MANAG9-PHOTORESOURCE-SERVICE/pictures?owner=" + username)
 				.header("Authorization", "Bearer " + token)
-				.retrieve() .bodyToFlux(Picture.class)
+				.retrieve().bodyToFlux(Picture.class)
 				.collectList()
 				.block();
 	}
