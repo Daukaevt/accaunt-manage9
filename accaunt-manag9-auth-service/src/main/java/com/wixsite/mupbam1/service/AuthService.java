@@ -19,7 +19,9 @@ public class AuthService {
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public void register(AuthRequest authRequest) {
-        if (userRepository.findByUsername(authRequest.getUsername()).isPresent()) {
+    	String normalizedUsername = authRequest.getUsername().toLowerCase();
+    	
+        if (userRepository.findByUsername(normalizedUsername).isPresent()) {
             throw new UserAlreadyExistsException("User already exists");
         }
         if (userRepository.findByEmail(authRequest.getEmail()).isPresent()) {
@@ -36,19 +38,20 @@ public class AuthService {
 
     
     public String getEmailByUsername(String username) {
-        return userRepository.findByUsername(username)
+        return userRepository.findByUsername(username.toLowerCase())
                 .map(User::getEmail)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
     
     public String getRoleByUsername(String username) {
-        return userRepository.findByUsername(username)
+        return userRepository.findByUsername(username.toLowerCase())
                 .map(User::getRole)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
     public boolean authenticate(AuthRequest authRequest) {
-        return userRepository.findByUsername(authRequest.getUsername())
+    	String normalizedUsername = authRequest.getUsername().toLowerCase();
+        return userRepository.findByUsername(normalizedUsername)
                 .filter(user -> passwordEncoder.matches(authRequest.getPassword(), user.getPassword()))
                 .isPresent();
     }   
