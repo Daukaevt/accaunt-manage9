@@ -69,5 +69,10 @@ public class GlobalExceptionHandler {
 
         return buildResponse(HttpStatus.BAD_REQUEST, errorMessage, request);
     }
+    
+    @ExceptionHandler(UserBlockedException.class)
+    public ResponseEntity<Map<String, Object>> handleUserBlocked(UserBlockedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request); // 429
+    }
 
 }
