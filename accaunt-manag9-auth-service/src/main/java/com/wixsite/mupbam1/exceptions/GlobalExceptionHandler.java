@@ -86,4 +86,22 @@ public class GlobalExceptionHandler {
                                                                    HttpServletRequest request) {
         return buildResponse(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request); // 429
     }
+    
+    @ExceptionHandler(InvalidVerificationCodeException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidCode(InvalidVerificationCodeException ex,
+                                                                 HttpServletRequest request) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(VerificationCodeExpiredException.class)
+    public ResponseEntity<Map<String, Object>> handleExpiredCode(VerificationCodeExpiredException ex,
+                                                                 HttpServletRequest request) {
+        return buildResponse(HttpStatus.GONE, ex.getMessage(), request); // 410 Gone
+    }
+
+    @ExceptionHandler(VerificationCodeAlreadyUsedException.class)
+    public ResponseEntity<Map<String, Object>> handleUsedCode(VerificationCodeAlreadyUsedException ex,
+                                                              HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request); // 409 Conflict
+    }
 }

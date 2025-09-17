@@ -31,7 +31,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody AuthRequest authRequest) {
         if (authService.authenticate(authRequest)) {
-            String verificationCode = String.valueOf((int)(Math.random() * 900000) + 100000);
+            String verificationCode = String.valueOf((int) (Math.random() * 900000) + 100000);
             verificationCodeService.saveCode(authRequest.getUsername(), verificationCode);
             String email = authService.getEmailByUsername(authRequest.getUsername());
             emailService.sendVerificationCode(email, verificationCode);
@@ -43,23 +43,16 @@ public class AuthController {
 
     @PostMapping("/verify")
     public ResponseEntity<?> verify(@Valid @RequestBody VerificationRequest verifyRequest) {
-        boolean isValid = verificationCodeService.verifyCode(verifyRequest.getUsername(), verifyRequest.getCode());
-        if (isValid) {
-            String role = authService.getRoleByUsername(verifyRequest.getUsername());
-            return ResponseEntity.ok(jwtUtil.generateToken(verifyRequest.getUsername(), role));
-        } else {
-            throw new BadCredentialsException("Invalid verification code");
-        }
+        // Проверка кода выбрасывает исключения для всех ошибок
+        verificationCodeService.verifyCode(verifyRequest.getUsername(), verifyRequest.getCode());
+
+        // Если успешно, выдаем JWT
+        String role = authService.getRoleByUsername(verifyRequest.getUsername());
+        return ResponseEntity.ok(jwtUtil.generateToken(verifyRequest.getUsername(), role));
     }
 
     @GetMapping("/validate")
     public ResponseEntity<Boolean> validate(@RequestParam String token) {
         return ResponseEntity.ok(jwtUtil.validateToken(token));
     }
-
-    @GetMapping("/")
-    public ResponseEntity<String> index() {
-        return ResponseEntity.ok("Hello from auth-service!");
-    }
 }
-

@@ -1,5 +1,8 @@
 package com.wixsite.mupbam1.service;
 
+import com.wixsite.mupbam1.exceptions.InvalidVerificationCodeException;
+import com.wixsite.mupbam1.exceptions.VerificationCodeAlreadyUsedException;
+import com.wixsite.mupbam1.exceptions.VerificationCodeExpiredException;
 import com.wixsite.mupbam1.model.VerificationCode;
 import com.wixsite.mupbam1.repository.VerificationCodeRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +18,7 @@ public class VerificationCodeService {
 
     public void saveCode(String username, String code) {
         VerificationCode verificationCode = new VerificationCode();
-        verificationCode.setUsername(username);
+        verificationCode.setUsername(username.toLowerCase());
         verificationCode.setCode(code);
         verificationCode.setCreatedAt(LocalDateTime.now());
         verificationCode.setUsed(false);
@@ -23,16 +26,25 @@ public class VerificationCodeService {
         verificationCodeRepository.save(verificationCode);
     }
 
-    public boolean verifyCode(String username, String code) {
-        return verificationCodeRepository.findTopByUsernameOrderByCreatedAtDesc(username)
-                .filter(vc -> !vc.isUsed())                                 // ещё не использован
-                .filter(vc -> vc.getCode().equals(code))                    // совпадает код
-                .filter(vc -> vc.getCreatedAt().isAfter(LocalDateTime.now().minusMinutes(5))) // не старше 5 мин
-                .map(vc -> {
-                    vc.setUsed(true);
-                    verificationCodeRepository.save(vc);                   // помечаем использованным
-                    return true;
-                })
-                .orElse(false);
+    public void verifyCode(String username, String code) {
+        VerificationCode vc = verificationCodeRepository
+                .findTopByUsernameOrderByCreatedAtDesc(username.toLowerCase())
+                .orElseThrow(() -> new InvalidVerificationCodeException("Invalid verification code"));
+
+        if (vc.isUsed()) {
+            throw new VerificationCodeAlreadyUsedException("Verification code already used");
+        }
+
+        if (!vc.getCode().equals(code)) {
+            throw new InvalidVerificationCodeException("Invalid verification code");
+        }
+
+        if (vc.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(5))) {
+            throw new VerificationCodeExpiredException("Verification code expired");
+        }
+
+        // Код успешен — помечаем как использованный
+        vc.setUsed(true);
+        verificationCodeRepository.save(vc);
     }
 }
