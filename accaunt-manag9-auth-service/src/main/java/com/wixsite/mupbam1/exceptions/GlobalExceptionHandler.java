@@ -74,5 +74,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleUserBlocked(UserBlockedException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request); // 429
     }
+    
+    @ExceptionHandler(EmailSendFailedException.class)
+    public ResponseEntity<Map<String, Object>> handleEmailSendFailed(EmailSendFailedException ex,
+                                                                     HttpServletRequest request) {
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request); // 503
+    }
 
+    @ExceptionHandler(TooManyEmailRequestsException.class)
+    public ResponseEntity<Map<String, Object>> handleTooManyEmails(TooManyEmailRequestsException ex,
+                                                                   HttpServletRequest request) {
+        return buildResponse(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request); // 429
+    }
 }
