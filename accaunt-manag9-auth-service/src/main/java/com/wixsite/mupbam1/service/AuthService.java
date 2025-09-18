@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -84,6 +85,8 @@ public class AuthService {
 
     public void register(AuthRequest authRequest) {
         String normalizedUsername = authRequest.getUsername().toLowerCase();
+        normalizedUsername = StringEscapeUtils.escapeHtml(normalizedUsername);              //escapeHtml4(normalizedUsername);
+
 
         if (userRepository.findByUsername(normalizedUsername).isPresent()) {
             throw new UserAlreadyExistsException("User already exists");
@@ -97,6 +100,7 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(authRequest.getPassword()));
         user.setRole(authRequest.getRole());
         user.setEmail(authRequest.getEmail());
+        
         userRepository.save(user);
     }
 

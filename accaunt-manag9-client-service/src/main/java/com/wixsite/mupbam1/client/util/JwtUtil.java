@@ -2,10 +2,11 @@ package com.wixsite.mupbam1.client.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.JwtException;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import jakarta.annotation.PostConstruct;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyFactory;
@@ -23,15 +24,16 @@ public class JwtUtil {
     public void init() {
         try {
             log.info("Загружаем public.pem...");
-            String key = new String(Files.readAllBytes(Paths.get("keys/public.pem")))
-                    .replaceAll("-----BEGIN PUBLIC KEY-----", "")
-                    .replaceAll("-----END PUBLIC KEY-----", "")
+            String key = Files.readString(Paths.get("keys/public.pem"))
+                    .replace("-----BEGIN PUBLIC KEY-----", "")
+                    .replace("-----END PUBLIC KEY-----", "")
                     .replaceAll("\\s+", "");
 
             byte[] decoded = Base64.getDecoder().decode(key);
             X509EncodedKeySpec spec = new X509EncodedKeySpec(decoded);
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
             this.publicKey = keyFactory.generatePublic(spec);
+
             log.info("Public key успешно загружен для проверки JWT");
         } catch (Exception e) {
             log.error("Ошибка при загрузке public.pem", e);
@@ -39,27 +41,11 @@ public class JwtUtil {
         }
     }
 
-    public boolean validateToken(String token) {
-        try {
-            log.info("Проверяем JWT: {}", token);
-            getClaims(token);
-            log.info("JWT валиден");
-            return true;
-        } catch (Exception e) {
-            log.warn("JWT невалиден: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    public Claims getClaims(String token) {
+    public Claims validateAndGetClaims(String token) throws JwtException {
         return Jwts.parserBuilder()
                 .setSigningKey(publicKey)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-    }
-
-    public String extractUsername(String token) {
-        return getClaims(token).getSubject();
     }
 }

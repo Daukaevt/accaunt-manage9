@@ -33,28 +33,47 @@ public class JwtFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
             try {
                 if (jwtUtil.validateToken(token)) {
-                    String username = jwtUtil.getClaims(token).getSubject();
-                    String role = (String) jwtUtil.getClaims(token).get("role");
+                    var claims = jwtUtil.getClaims(token);
+                    String username = claims.getSubject();
+                    String role = (String) claims.get("role");
 
                     UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                            username,
-                            null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + role)) // <-- ключевая строка
-                        );
+                            new UsernamePasswordAuthenticationToken(
+                                    username,
+                                    null,
+                                    List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                            );
 
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 } else {
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT token");
+                    sendError(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT token");
                     return;
                 }
             } catch (Exception e) {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT token");
+                sendError(response, HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
+                return;
+            }
+        } else {
+            // Если нет токена для защищённого ресурса
+            if (requiresAuth(request)) {
+                sendError(response, HttpServletResponse.SC_FORBIDDEN, "Access denied: no token provided");
                 return;
             }
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void sendError(HttpServletResponse response, int status, String message) throws IOException {
+        response.setContentType("application/json");
+        response.setStatus(status);
+        response.getOutputStream().println("{ \"error\": \"" + status + "\", \"message\": \"" + message + "\" }");
+    }
+
+    private boolean requiresAuth(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        // Перечисляем открытые эндпоинты
+        return !(path.startsWith("/auth/register") || path.startsWith("/auth/login") || path.startsWith("/auth/verify"));
     }
 }
