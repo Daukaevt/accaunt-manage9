@@ -1,5 +1,6 @@
 package com.wixsite.mupbam1.config;
 
+import com.wixsite.mupbam1.exceptions.NotFoundHandlers;
 import com.wixsite.mupbam1.filter.JwtFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -22,11 +23,13 @@ public class SecurityConfig {
                 .requestMatchers("/auth/register", "/auth/login", "/auth/verify").permitAll()
                 .requestMatchers("/pictures/**").hasRole("USER")
                 .anyRequest().authenticated())
-            .exceptionHandling()
-                .authenticationEntryPoint(jwtAuthEntryPoint) // используем бин
-            .and()
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(new NotFoundHandlers.NotFoundEntryPoint())
+                .accessDeniedHandler(new NotFoundHandlers.NotFoundDeniedHandler())
+            )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
+
 }
