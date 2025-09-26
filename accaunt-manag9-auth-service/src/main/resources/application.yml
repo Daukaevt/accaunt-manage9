@@ -5,6 +5,11 @@ spring:
   application:
     name: account-manag9-auth-service
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -20,22 +25,23 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
   mail:
-    host: smtp.gmail.com   # или smtp.yandex.ru / smtp.mail.ru и т.д.
+    host: smtp.gmail.com    # можно изменить на smtp.yandex.ru / smtp.mail.ru
     port: 587
-    username: ${EMAIL_USERNAME}  # логин почтового ящика
-    password: ${EMAIL_PASSWORD}  # пароль приложения (app password!)
+    username: ${EMAIL_USERNAME}   # логин почтового ящика
+    password: ${EMAIL_PASSWORD}   # пароль приложения (app password)
     properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+      mail.smtp:
+        auth: true
+        starttls.enable: true
     default-encoding: UTF-8
 
 jwt:
   secret: ${JWT_SECRET}
+  expiration-ms: 3600000   # 1 час, можно использовать для TTL в Redis
 
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka
+    register-with-eureka: true
+    fetch-registry: true

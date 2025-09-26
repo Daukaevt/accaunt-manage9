@@ -1,5 +1,6 @@
 package com.wixsite.mupbam1.filter;
 
+import com.wixsite.mupbam1.service.TokenStoreService;
 import com.wixsite.mupbam1.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -22,6 +23,9 @@ public class JwtFilter extends OncePerRequestFilter {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private TokenStoreService tokenStoreService;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -31,6 +35,14 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
+
+            // Проверка токена в Redis
+            if (!tokenStoreService.isTokenValid(token)) {
+                sendError(response, HttpServletResponse.SC_UNAUTHORIZED,
+                        "Token revoked or expired");
+                return;
+            }
+
             try {
                 if (jwtUtil.validateToken(token)) {
                     var claims = jwtUtil.getClaims(token);
@@ -57,7 +69,8 @@ public class JwtFilter extends OncePerRequestFilter {
         } else {
             // Если нет токена для защищённого ресурса
             if (requiresAuth(request)) {
-                sendError(response, HttpServletResponse.SC_FORBIDDEN, "Access denied: no token provided");
+                sendError(response, HttpServletResponse.SC_FORBIDDEN,
+                        "Access denied: no token provided");
                 return;
             }
         }
@@ -74,6 +87,8 @@ public class JwtFilter extends OncePerRequestFilter {
     private boolean requiresAuth(HttpServletRequest request) {
         String path = request.getRequestURI();
         // Перечисляем открытые эндпоинты
-        return !(path.startsWith("/auth/register") || path.startsWith("/auth/login") || path.startsWith("/auth/verify"));
+        return !(path.startsWith("/auth/register")
+                || path.startsWith("/auth/login")
+                || path.startsWith("/auth/verify"));
     }
 }

@@ -45,3 +45,8 @@ accaunt-manag9-eureka-server/src/main/resources/application.properties
 **/.env
 *.pem
 
+# Игнорируем логи JVM crash
+*.log
+hs_err_pid*.log
+
+
