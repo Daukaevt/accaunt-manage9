@@ -16,7 +16,9 @@ public class TokenStoreService {
     private static final String PREFIX = "auth:tokens:";
 
     public void saveToken(String token, long ttlMillis) {
-        redisTemplate.opsForValue().set(PREFIX + token, "1", ttlMillis, TimeUnit.MILLISECONDS);
+    	System.out.println("---------------" + token);
+        long ttlSeconds = ttlMillis / 1000;
+        redisTemplate.opsForValue().set(PREFIX + token, "1", ttlSeconds, TimeUnit.SECONDS);
     }
 
     public boolean isTokenValid(String token) {

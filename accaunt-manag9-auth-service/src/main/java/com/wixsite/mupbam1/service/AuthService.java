@@ -33,19 +33,16 @@ public class AuthService {
     private final int MAX_ATTEMPTS = 5;
     private final int BLOCK_MINUTES = 15;
 
-    /**
-     * Аутентификация: проверка пароля → генерация JWT → сохранение в Redis
-     */
-    public String authenticate(AuthRequest authRequest) {
+    public User authenticate(AuthRequest authRequest) {
         String username = authRequest.getUsername().toLowerCase();
 
-        // Проверка блокировки
+        // Проверка блокировок
         if (blockedUntil.containsKey(username)) {
             LocalDateTime unblockTime = blockedUntil.get(username);
             if (LocalDateTime.now().isBefore(unblockTime)) {
                 throw new UserBlockedException(
-                        "Too many failed login attempts. User is temporarily blocked for "
-                                + BLOCK_MINUTES + " minutes."
+                    "Too many failed login attempts. User is temporarily blocked for "
+                    + BLOCK_MINUTES + " minutes."
                 );
             } else {
                 blockedUntil.remove(username);
@@ -53,7 +50,7 @@ public class AuthService {
             }
         }
 
-        // Проверка логина/пароля
+        // Проверка пароля
         User user = userRepository.findByUsername(username)
                 .filter(u -> passwordEncoder.matches(authRequest.getPassword(), u.getPassword()))
                 .orElse(null);
@@ -65,26 +62,20 @@ public class AuthService {
             if (attempts >= MAX_ATTEMPTS) {
                 blockedUntil.put(username, LocalDateTime.now().plusMinutes(BLOCK_MINUTES));
                 throw new UserBlockedException(
-                        "Too many failed login attempts. User is temporarily blocked for "
-                                + BLOCK_MINUTES + " minutes."
+                    "Too many failed login attempts. User is temporarily blocked for "
+                    + BLOCK_MINUTES + " minutes."
                 );
             }
-
-            return null; // неверный пароль
+            return null;
         }
 
-        // Успешный логин → обнуляем счётчики
+        // Успешный логин → сброс счётчиков
         loginAttempts.remove(username);
         blockedUntil.remove(username);
 
-        // Генерация JWT
-        String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
-
-        // Сохраняем в Redis (TTL = 1 час = 3600000 мс)
-        tokenStoreService.saveToken(token, 3600_000);
-
-        return token;
+        return user;
     }
+
 
     public void register(AuthRequest authRequest) {
         String normalizedUsername = authRequest.getUsername().toLowerCase();

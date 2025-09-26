@@ -2,6 +2,7 @@ package com.wixsite.mupbam1.filter;
 
 import com.wixsite.mupbam1.service.TokenStoreService;
 import com.wixsite.mupbam1.util.JwtUtil;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,14 +37,14 @@ public class JwtFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
 
-            // Проверка токена в Redis
+            // Проверка в Redis (отозван или истёк TTL)
             if (!tokenStoreService.isTokenValid(token)) {
-                sendError(response, HttpServletResponse.SC_UNAUTHORIZED,
-                        "Token revoked or expired");
+                sendError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token revoked");
                 return;
             }
 
             try {
+                // Проверка подписи и exp
                 if (jwtUtil.validateToken(token)) {
                     var claims = jwtUtil.getClaims(token);
                     String username = claims.getSubject();
@@ -62,15 +63,18 @@ public class JwtFilter extends OncePerRequestFilter {
                     sendError(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT token");
                     return;
                 }
+            } catch (ExpiredJwtException e) {
+                // JWT истёк по claim exp
+                sendError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token expired");
+                return;
             } catch (Exception e) {
-                sendError(response, HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
+                sendError(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT: " + e.getMessage());
                 return;
             }
         } else {
-            // Если нет токена для защищённого ресурса
+            // Нет токена для защищённого ресурса
             if (requiresAuth(request)) {
-                sendError(response, HttpServletResponse.SC_FORBIDDEN,
-                        "Access denied: no token provided");
+                sendError(response, HttpServletResponse.SC_FORBIDDEN, "Access denied: no token provided");
                 return;
             }
         }
